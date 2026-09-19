@@ -30,6 +30,32 @@ npm run benchmark
 
 The benchmark creates 30 ordered chunks, waits for completion, replays after a cursor, and verifies exactly 32 events (run-start, 30 chunks, run-completed), zero duplicates, zero missing events, and a completed terminal state.
 
+## Test commands
+
+Run the complete test suite:
+
+```text
+npm test
+```
+
+Run the runtime test file only:
+
+```text
+npm run test:single
+```
+
+Run one test by name:
+
+```text
+npm run test:case -- "records a failed run after partial generation"
+```
+
+Run tests in watch mode while developing:
+
+```text
+npm run test:watch
+```
+
 ## Architecture
 
 - `server/store.ts`: atomic event/run persistence.
