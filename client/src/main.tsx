@@ -96,6 +96,21 @@ function App() {
       );
   }, [messages, events, runId, cursor, status]);
 
+  function startNewConversation(): void {
+    streamRef.current?.close();
+    localStorage.removeItem(SESSION_KEY);
+    conversationId.current = crypto.randomUUID();
+    activeAssistantId.current = "";
+    cursorRef.current = 0;
+    setMessages([]);
+    setEvents([]);
+    setRunId("");
+    setCursor(0);
+    setStatus("idle");
+    setDisconnectNotice("");
+    setInput(APP_CONSTANTS.conversation.defaultInput);
+  }
+
   async function sendMessage() {
     const content = input.trim();
     if (!content || status === "connecting" || status === "connected") return;
@@ -192,7 +207,12 @@ function App() {
   return (
     <main>
       <header>
-        <h1>Resumable conversation</h1>
+        <div className="header-row">
+          <h1>Resumable conversation</h1>
+          <button className="secondary-button" onClick={startNewConversation}>
+            New conversation
+          </button>
+        </div>
         <p className="hint">
           A multi-turn AI conversation with durable streaming and cursor-based
           recovery.
