@@ -32,6 +32,15 @@ const migrations: Migration[] = [
         ON events (run_id, sequence);
     `,
   },
+  {
+    version: 2,
+    name: "persist_generation_options",
+    sql: `
+      ALTER TABLE runs ADD COLUMN chunk_count INTEGER NOT NULL DEFAULT 12;
+      ALTER TABLE runs ADD COLUMN delay_ms INTEGER NOT NULL DEFAULT 100;
+      ALTER TABLE runs ADD COLUMN fail_at INTEGER;
+    `,
+  },
 ];
 
 export function runMigrations(db: DatabaseSync): void {

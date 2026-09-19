@@ -69,4 +69,4 @@ The server logs stream connection/disconnection and shutdown lifecycle events as
 
 Before closing active SSE streams, the server sends a `server_shutdown` transport event so clients can show an explicit disconnected state instead of relying only on browser-level connection errors.
 
-If the process stops during generation, already persisted events remain inspectable. On startup, any run left in `running` state is durably transitioned to `interrupted` with a terminal event. The prototype does not resume the fake generator; production behavior could use a durable job and retry policy instead.
+If the process stops during generation, already persisted events remain inspectable. On startup, any run left in `running` state is resumed from the number of persisted chunks. Generation options are stored with the run, so the same run continues and eventually emits one terminal event. A production provider would additionally need an idempotency key or provider-side checkpoint to make external model calls safe across process restarts.

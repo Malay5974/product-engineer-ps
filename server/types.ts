@@ -18,4 +18,7 @@ export interface Run {
   state: RunState;
   nextSequence: number;
   createdAt: string;
+  chunkCount: number;
+  delayMs: number;
+  failAt?: number;
 }

@@ -14,9 +14,12 @@ export class Store {
     this.db = new DatabaseSync(filename);
     this.db.exec("PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;");
     runMigrations(this.db);
-    this.recoverInterruptedRuns();
   }
-  createRun(conversationId: string, input: string): Run {
+  createRun(
+    conversationId: string,
+    input: string,
+    options: { count?: number; delayMs?: number; failAt?: number } = {},
+  ): Run {
     if (!conversationId.trim()) throw new Error("conversationId is required");
     if (!input.trim()) throw new Error("input is required");
     const run: Run = {
@@ -27,9 +30,14 @@ export class Store {
       state: "running",
       nextSequence: 1,
       createdAt: new Date().toISOString(),
+      chunkCount: options.count ?? 12,
+      delayMs: options.delayMs ?? 100,
+      failAt: options.failAt,
     };
     this.db
-      .prepare("INSERT INTO runs VALUES (?,?,?,?,?,?,?)")
+      .prepare(
+        "INSERT INTO runs (id, conversation_id, user_message_id, input, state, next_sequence, created_at, chunk_count, delay_ms, fail_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
+      )
       .run(
         run.id,
         run.conversationId,
@@ -38,15 +46,25 @@ export class Store {
         run.state,
         run.nextSequence,
         run.createdAt,
+        run.chunkCount,
+        run.delayMs,
+        run.failAt ?? null,
       );
     return run;
   }
   getRun(id: string): Run | undefined {
     return this.db
       .prepare(
-        "SELECT id, conversation_id conversationId, user_message_id userMessageId, input, state, next_sequence nextSequence, created_at createdAt FROM runs WHERE id=?",
+        "SELECT id, conversation_id conversationId, user_message_id userMessageId, input, state, next_sequence nextSequence, created_at createdAt, chunk_count chunkCount, delay_ms delayMs, fail_at failAt FROM runs WHERE id=?",
       )
       .get(id) as Run | undefined;
+  }
+  runningRuns(): Run[] {
+    return this.db
+      .prepare(
+        "SELECT id, conversation_id conversationId, user_message_id userMessageId, input, state, next_sequence nextSequence, created_at createdAt, chunk_count chunkCount, delay_ms delayMs, fail_at failAt FROM runs WHERE state='running'",
+      )
+      .all() as unknown as Run[];
   }
   append(runId: string, kind: EventKind, payload: string): ConversationEvent {
     return this.transaction(() =>
@@ -91,43 +109,6 @@ export class Store {
       .all(runId, cursor) as unknown as ConversationEvent[];
   }
 
-  private recoverInterruptedRuns(): void {
-    const runningRuns = this.db
-      .prepare(
-        "SELECT id, next_sequence nextSequence FROM runs WHERE state='running'",
-      )
-      .all() as Array<{ id: string; nextSequence: number }>;
-
-    this.transaction(() => {
-      for (const run of runningRuns) {
-        const event: ConversationEvent = {
-          id: randomUUID(),
-          runId: run.id,
-          sequence: run.nextSequence,
-          kind: "run_interrupted",
-          payload: "Service restarted before generation completed",
-          createdAt: new Date().toISOString(),
-        };
-        this.db
-          .prepare(
-            "INSERT INTO events (id, run_id, sequence, kind, payload, created_at) VALUES (?, ?, ?, ?, ?, ?)",
-          )
-          .run(
-            event.id,
-            event.runId,
-            event.sequence,
-            event.kind,
-            event.payload,
-            event.createdAt,
-          );
-        this.db
-          .prepare(
-            "UPDATE runs SET state='interrupted', next_sequence=next_sequence+1 WHERE id=? AND state='running'",
-          )
-          .run(run.id);
-      }
-    });
-  }
   setState(
     runId: string,
     state: RunState,

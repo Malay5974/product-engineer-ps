@@ -69,18 +69,25 @@ describe("resumable conversation runtime", () => {
     reopened.close();
     rmSync(directory, { recursive: true, force: true });
   });
-  it("marks an in-progress run interrupted after service restart", () => {
+  it("resumes an in-progress run after service restart", async () => {
     const directory = mkdtempSync(join(tmpdir(), "caygnus-"));
     const filename = join(directory, "conversation.db");
     const firstStore = new Store(filename);
-    const run = firstStore.createRun("c1", "interrupted run");
+    const run = firstStore.createRun("c1", "resumed run", {
+      count: 3,
+      delayMs: 1,
+    });
     firstStore.append(run.id, "run_started", "");
+    firstStore.append(run.id, "chunk", "resumed run · response chunk 1");
     firstStore.close();
     const reopened = new Store(filename);
-    expect(reopened.getRun(run.id)?.state).toBe("interrupted");
-    expect(reopened.eventsAfter(run.id, 0).at(-1)?.kind).toBe(
-      "run_interrupted",
-    );
+    const runtime = new Runtime(reopened);
+    const final = await waitFor(reopened, run.id);
+    expect(runtime).toBeDefined();
+    expect(final?.state).toBe("completed");
+    expect(
+      reopened.eventsAfter(run.id, 0).filter((event) => event.kind === "chunk"),
+    ).toHaveLength(3);
     reopened.close();
     rmSync(directory, { recursive: true, force: true });
   });

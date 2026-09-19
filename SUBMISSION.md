@@ -41,7 +41,7 @@ Implemented: ordered live stream, missed-event replay, replay/live deduplication
 ## Assumptions and limitations
 
 - The fake generator is used instead of a live model provider.
-- A process restart preserves history and marks an in-progress generator as interrupted; production could use a durable job and explicit retry policy to resume it.
+- A process restart preserves history and automatically resumes an in-progress deterministic generator from its last persisted chunk. A production provider would additionally need an idempotency key or provider-side checkpoint for safe external retries.
 - Authentication, multi-user conversations, multiple simultaneous runs, and production-scale deployment are out of scope.
 
 ## Technology choices
