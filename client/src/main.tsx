@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./style.css";
 import { createRun } from "./api.js";
+import { APP_CONSTANTS } from "../../shared/constants.js";
 
 type Event = { sequence: number; kind: string; payload: string };
 type Message = {
@@ -19,17 +20,21 @@ type SavedSession = {
   assistantId: string;
   status: string;
 };
-const SESSION_KEY = "caygnus-resumable-conversation";
+const SESSION_KEY = APP_CONSTANTS.storage.sessionKey;
 
 function App() {
-  const [input, setInput] = useState("Hello from a resilient conversation");
+  const [input, setInput] = useState<string>(
+    APP_CONSTANTS.conversation.defaultInput,
+  );
   const [messages, setMessages] = useState<Message[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
   const [status, setStatus] = useState("idle");
   const [runId, setRunId] = useState("");
   const [cursor, setCursor] = useState(0);
   const [failure, setFailure] = useState(false);
-  const [chunkCount, setChunkCount] = useState(12);
+  const [chunkCount, setChunkCount] = useState<number>(
+    APP_CONSTANTS.conversation.defaultChunkCount,
+  );
   const [disconnectNotice, setDisconnectNotice] = useState("");
   const conversationId = useRef<string>(crypto.randomUUID());
   const streamRef = useRef<EventSource | null>(null);
@@ -115,7 +120,7 @@ function App() {
         input: content,
         count: chunkCount,
         failAt: failure ? Math.min(4, chunkCount - 1) : undefined,
-        delayMs: 250,
+        delayMs: APP_CONSTANTS.conversation.responseDelayMs,
       });
       setRunId(run.id);
       connect(run.id, 0, assistantId);
@@ -145,7 +150,7 @@ function App() {
     streamRef.current?.close();
     setStatus("connected");
     setDisconnectNotice("");
-    const stream = new EventSource(`/api/runs/${id}/events?cursor=${from}`);
+    const stream = new EventSource(APP_CONSTANTS.api.eventsPath(id, from));
     streamRef.current = stream;
     stream.onmessage = (message) => {
       const event = JSON.parse(message.data) as Event;
@@ -226,12 +231,19 @@ function App() {
           Response chunks{" "}
           <input
             type="number"
-            min="1"
-            max="100"
+            min={APP_CONSTANTS.conversation.minChunkCount}
+            max={APP_CONSTANTS.conversation.maxChunkCount}
             value={chunkCount}
             onChange={(event) =>
               setChunkCount(
-                Math.max(1, Math.min(100, Number(event.target.value) || 1)),
+                Math.max(
+                  APP_CONSTANTS.conversation.minChunkCount,
+                  Math.min(
+                    APP_CONSTANTS.conversation.maxChunkCount,
+                    Number(event.target.value) ||
+                      APP_CONSTANTS.conversation.minChunkCount,
+                  ),
+                ),
               )
             }
             disabled={status === "connecting" || status === "connected"}

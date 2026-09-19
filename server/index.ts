@@ -2,8 +2,11 @@ import { createServer } from "node:http";
 import { readJsonBody, sendError, sendOptions, sendSuccess } from "./http.js";
 import { Store } from "./store.js";
 import { Runtime } from "./runtime.js";
+import { APP_CONSTANTS } from "../shared/constants.js";
 
-const store = new Store(process.env.DB_FILE ?? "./conversation.db");
+const store = new Store(
+  process.env.DB_FILE ?? APP_CONSTANTS.server.defaultDatabaseFile,
+);
 const runtime = new Runtime(store);
 const server = createServer(async (req, res) => {
   const url = new URL(
@@ -15,25 +18,33 @@ const server = createServer(async (req, res) => {
     return sendOptions(res);
   }
   try {
-    if (req.method === "POST" && url.pathname === "/api/runs") {
+    if (req.method === "POST" && url.pathname === APP_CONSTANTS.api.runsPath) {
       const b = await readJsonBody(req);
       const input = String(b.input ?? "");
       if (!input.trim()) return sendError(res, 400, "input is required");
-      const count = Number(b.count ?? 12);
-      const delayMs = Number(b.delayMs ?? 100);
+      const count = Number(
+        b.count ?? APP_CONSTANTS.server.defaultGeneratorChunkCount,
+      );
+      const delayMs = Number(
+        b.delayMs ?? APP_CONSTANTS.server.defaultGeneratorDelayMs,
+      );
       if (
         !Number.isInteger(count) ||
         count < 1 ||
-        count > 100 ||
+        count > APP_CONSTANTS.server.maxGeneratorChunkCount ||
         !Number.isFinite(delayMs) ||
         delayMs < 0
       )
         return sendError(res, 400, "invalid generation options");
-      const run = runtime.start(String(b.conversationId ?? "demo"), input, {
-        count,
-        failAt: b.failAt === undefined ? undefined : Number(b.failAt),
-        delayMs,
-      });
+      const run = runtime.start(
+        String(b.conversationId ?? APP_CONSTANTS.server.defaultConversationId),
+        input,
+        {
+          count,
+          failAt: b.failAt === undefined ? undefined : Number(b.failAt),
+          delayMs,
+        },
+      );
       return sendSuccess(res, 201, run);
     }
     if (
@@ -72,7 +83,7 @@ const server = createServer(async (req, res) => {
           clearInterval(timer);
         }
       };
-      const timer = setInterval(send, 50);
+      const timer = setInterval(send, APP_CONSTANTS.server.eventPollIntervalMs);
       send();
       req.on("close", () => clearInterval(timer));
       return;
@@ -92,7 +103,7 @@ const server = createServer(async (req, res) => {
     );
   }
 });
-const port = Number(process.env.PORT ?? 3000);
+const port = Number(process.env.PORT ?? APP_CONSTANTS.server.defaultPort);
 server.listen(port, () =>
   console.log(`server listening on http://localhost:${port}`),
 );

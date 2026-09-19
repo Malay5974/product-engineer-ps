@@ -75,10 +75,11 @@ function isRunResponse(value: unknown): value is RunResponse {
 }
 
 export function createRun(payload: CreateRunInput): Promise<RunResponse> {
-  return requestJson<RunResponse>("/api/runs", {
+  return requestJson<RunResponse>(APP_CONSTANTS.api.runsPath, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(payload),
     validate: isRunResponse,
   });
 }
+import { APP_CONSTANTS } from "../../shared/constants.js";
