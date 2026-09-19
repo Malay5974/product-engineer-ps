@@ -42,6 +42,9 @@ function App() {
   const activeAssistantId = useRef("");
   const historyRef = useRef<HTMLElement | null>(null);
   const restoredRef = useRef(false);
+  const reconnectAttempt = useRef(0);
+  const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const manualDisconnect = useRef(false);
 
   useEffect(() => {
     if (historyRef.current)
@@ -97,6 +100,8 @@ function App() {
   }, [messages, events, runId, cursor, status]);
 
   function startNewConversation(): void {
+    if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
+    manualDisconnect.current = true;
     streamRef.current?.close();
     localStorage.removeItem(SESSION_KEY);
     conversationId.current = crypto.randomUUID();
@@ -115,6 +120,7 @@ function App() {
     const content = input.trim();
     if (!content || status === "connecting" || status === "connected") return;
     streamRef.current?.close();
+    manualDisconnect.current = false;
     const userId = crypto.randomUUID();
     const assistantId = crypto.randomUUID();
     activeAssistantId.current = assistantId;
@@ -163,6 +169,7 @@ function App() {
   ) {
     if (!id) return;
     streamRef.current?.close();
+    manualDisconnect.current = false;
     setStatus("connected");
     setDisconnectNotice("");
     const stream = new EventSource(APP_CONSTANTS.api.eventsPath(id, from));
@@ -195,12 +202,29 @@ function App() {
           ),
         );
         stream.close();
+        reconnectAttempt.current = 0;
       }
     };
     stream.onerror = () => {
       stream.close();
-      setStatus("disconnected");
-      setDisconnectNotice("Connection lost. Reconnect to continue.");
+      if (manualDisconnect.current) return;
+      const attempt = reconnectAttempt.current + 1;
+      reconnectAttempt.current = attempt;
+      if (attempt > APP_CONSTANTS.reconnect.maxAttempts) {
+        setStatus("disconnected");
+        setDisconnectNotice("Connection lost. Reconnect to continue.");
+        return;
+      }
+      const delay = Math.min(
+        APP_CONSTANTS.reconnect.maxDelayMs,
+        APP_CONSTANTS.reconnect.initialDelayMs * 2 ** (attempt - 1),
+      );
+      setStatus("reconnecting");
+      setDisconnectNotice(`Connection lost. Reconnecting in ${delay / 1000}s…`);
+      reconnectTimer.current = setTimeout(
+        () => connect(id, cursorRef.current, assistantId),
+        delay,
+      );
     };
   }
 
@@ -289,6 +313,8 @@ function App() {
         </button>
         <button
           onClick={() => {
+            manualDisconnect.current = true;
+            if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
             streamRef.current?.close();
             setStatus("disconnected");
             setDisconnectNotice("Connection lost. Reconnect to continue.");
@@ -299,7 +325,7 @@ function App() {
         </button>
         <button
           onClick={() => connect()}
-          disabled={!runId || status === "completed" || status === "failed"}
+          disabled={!runId || status !== "disconnected"}
         >
           Reconnect from cursor
         </button>

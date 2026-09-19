@@ -64,10 +64,13 @@ npm run test:watch
 - `server/generator.ts`: controllable fake response stream, including failure injection.
 - `server/index.ts`: HTTP API and cursor-based SSE stream.
 - `server/http.ts`: shared JSON success, error, options, and request-body helpers.
+- `server/logger.ts`: structured lifecycle logging without message-content logging.
 - `client/src/main.tsx`: connection state, cursor tracking, and event deduplication.
 - `client/src/api.ts`: the single frontend JSON HTTP wrapper; new JSON API calls should use `requestJson`.
 - `tests/runtime.test.ts`: ordering, replay, failure, and replay/live overlap tests.
 
 Each event has a stable ID and monotonically increasing per-run sequence. The server owns ordering. The client ignores an event whose sequence it has already rendered. A reconnect requests `events?cursor=N`, allowing persisted replay to transition into live delivery without duplicate display.
+
+The server logs stream connection/disconnection and shutdown lifecycle events as structured JSON. On shutdown it closes active streams and the database cleanly.
 
 If the process stops during generation, already persisted events remain inspectable. On startup, any run left in `running` state is durably transitioned to `interrupted` with a terminal event. The prototype does not resume the fake generator; production behavior could use a durable job and retry policy instead.

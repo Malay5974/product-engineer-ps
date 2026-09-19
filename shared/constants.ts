@@ -19,6 +19,8 @@ export const APP_CONSTANTS = {
     defaultGeneratorChunkCount: 12,
     maxGeneratorChunkCount: 100,
     eventPollIntervalMs: 50,
+    shutdownTimeoutMs: 5000,
   },
+  reconnect: { maxAttempts: 5, initialDelayMs: 500, maxDelayMs: 8000 },
   storage: { sessionKey: "caygnus-resumable-conversation" },
 } as const;

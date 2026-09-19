@@ -1,13 +1,15 @@
-import { createServer } from "node:http";
+import { createServer, type ServerResponse } from "node:http";
 import { readJsonBody, sendError, sendOptions, sendSuccess } from "./http.js";
 import { Store } from "./store.js";
 import { Runtime } from "./runtime.js";
 import { APP_CONSTANTS } from "../shared/constants.js";
+import { logEvent } from "./logger.js";
 
 const store = new Store(
   process.env.DB_FILE ?? APP_CONSTANTS.server.defaultDatabaseFile,
 );
 const runtime = new Runtime(store);
+const activeStreams = new Set<ServerResponse>();
 const server = createServer(async (req, res) => {
   const url = new URL(
     req.url ?? "/",
@@ -64,6 +66,8 @@ const server = createServer(async (req, res) => {
         connection: "keep-alive",
         "access-control-allow-origin": "*",
       });
+      activeStreams.add(res);
+      logEvent("stream_connected", { runId: run.id, cursor });
       let sent = cursor;
       const send = () => {
         const events = store.eventsAfter(run.id, sent);
@@ -85,7 +89,11 @@ const server = createServer(async (req, res) => {
       };
       const timer = setInterval(send, APP_CONSTANTS.server.eventPollIntervalMs);
       send();
-      req.on("close", () => clearInterval(timer));
+      req.on("close", () => {
+        clearInterval(timer);
+        activeStreams.delete(res);
+        logEvent("stream_disconnected", { runId: run.id, cursor: sent });
+      });
       return;
     }
     if (req.method === "GET" && parts[0] === "api" && parts[1] === "runs") {
@@ -104,6 +112,21 @@ const server = createServer(async (req, res) => {
   }
 });
 const port = Number(process.env.PORT ?? APP_CONSTANTS.server.defaultPort);
-server.listen(port, () =>
-  console.log(`server listening on http://localhost:${port}`),
-);
+server.listen(port, () => logEvent("server_started", { port }));
+
+function shutdown(signal: string): void {
+  logEvent("server_shutdown_started", { signal });
+  for (const stream of activeStreams) stream.end();
+  server.close(() => {
+    store.close();
+    logEvent("server_shutdown_completed");
+    process.exit(0);
+  });
+  setTimeout(
+    () => process.exit(1),
+    APP_CONSTANTS.server.shutdownTimeoutMs,
+  ).unref();
+}
+
+process.once("SIGINT", () => shutdown("SIGINT"));
+process.once("SIGTERM", () => shutdown("SIGTERM"));
