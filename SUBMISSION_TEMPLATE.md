@@ -5,7 +5,7 @@
 - **Name:**
 - **Email:**
 - **GitHub:**
-- **Selected problem:**
+- **Selected problem:** Problem 1 — Resumable Realtime Conversation
 - **Demo video:**
 
 ## Run the project
@@ -13,7 +13,11 @@
 List prerequisites and provide exact commands. Include required environment-variable names, but never commit secret values.
 
 ```text
-Add setup and run commands here.
+npm install
+npm run dev:server
+npm run dev:client
+
+Open http://localhost:5173/client/. No secrets or model provider are required. See IMPLEMENTATION.md for architecture and benchmark details.
 ```
 
 Explain how the reviewer can trigger the successful scenario and the required failure or recovery scenario.
@@ -21,7 +25,9 @@ Explain how the reviewer can trigger the successful scenario and the required fa
 ## Run the tests
 
 ```text
-Add test commands here.
+npm test
+npm run build
+npm run benchmark
 ```
 
 ## Acceptance scenarios and verification

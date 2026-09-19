@@ -1,0 +1,139 @@
+body {
+  margin: 0;
+  background: #101827;
+  color: #e8eef7;
+  font:
+    16px system-ui,
+    sans-serif;
+}
+main {
+  max-width: 760px;
+  margin: 5rem auto;
+  padding: 2rem;
+  background: #182438;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px #0005;
+}
+header {
+  margin-bottom: 1.5rem;
+}
+textarea {
+  width: 100%;
+  height: 88px;
+  min-height: 88px;
+  max-height: 160px;
+  overflow-y: auto;
+  resize: vertical;
+  margin: 1rem 0 0.5rem;
+  padding: 0.8rem;
+  box-sizing: border-box;
+  background: #0e1726;
+  color: inherit;
+  border: 1px solid #40516c;
+  border-radius: 8px;
+}
+button {
+  margin: 0.5rem 0.6rem 0.5rem 0;
+  padding: 0.7rem 1rem;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  background: #71b7ff;
+  color: #07101d;
+}
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.count-control {
+  color: #c9d8ed;
+}
+.count-control input {
+  width: 4.5rem;
+  margin-left: 0.4rem;
+  padding: 0.4rem;
+  border: 1px solid #40516c;
+  border-radius: 6px;
+  background: #0e1726;
+  color: inherit;
+}
+.failure {
+  display: block;
+  color: #c9d8ed;
+  margin: 0.5rem 0;
+}
+.hint,
+small {
+  color: #9fb0c8;
+}
+.status {
+  margin: 1.5rem 0;
+}
+.disconnect-note {
+  margin: 0.65rem auto;
+  padding: 0.45rem 0.75rem;
+  width: fit-content;
+  max-width: 90%;
+  border-radius: 999px;
+  background: #26384d;
+  color: #aebed1;
+  font-size: 0.85rem;
+  text-align: center;
+}
+.history {
+  height: 220px;
+  min-height: 160px;
+  overflow-y: scroll;
+  scrollbar-gutter: stable;
+  padding: 0.5rem;
+  border: 1px solid #263b59;
+  border-radius: 10px;
+}
+.history::-webkit-scrollbar {
+  width: 12px;
+}
+.history::-webkit-scrollbar-track {
+  background: #0b1320;
+  border-radius: 10px;
+}
+.history::-webkit-scrollbar-thumb {
+  background: #58799f;
+  border: 3px solid #0b1320;
+  border-radius: 10px;
+}
+.history::-webkit-scrollbar-thumb:hover {
+  background: #79a6d4;
+}
+.empty {
+  color: #9fb0c8;
+  text-align: center;
+  padding: 2.5rem 1rem;
+}
+.message {
+  margin: 1rem 0;
+  padding: 0.9rem 1rem;
+  border-radius: 8px;
+}
+.message p {
+  margin: 0.35rem 0 0;
+  line-height: 1.65;
+}
+.user {
+  margin-left: 18%;
+  background: #23395d;
+}
+.assistant {
+  margin-right: 10%;
+  background: #0e1726;
+}
+.message small {
+  display: block;
+  margin-top: 0.5rem;
+  color: #ffb1a8;
+}
