@@ -52,7 +52,18 @@ React and TypeScript provide a small browser client with explicit connection sta
 
 ## AI usage
 
-TODO — describe AI tools used and how their output was reviewed.
+I used OpenAI Codex as an engineering assistant during this submission. I used it
+to review the problem requirements, inspect the implementation, identify gaps in
+failure handling and test coverage, suggest focused changes, and help verify the
+repository with the existing test, build and benchmark commands.
+
+I remained responsible for the implementation and reviewed the generated
+suggestions against the problem brief and the existing architecture before
+applying them. In particular, I checked the run-state transitions, cursor and
+event-ordering behavior, restart recovery, validation boundaries and terminal
+failure behavior. The final changes were formatted and verified with the
+automated test suite and TypeScript/Vite build. AI-generated output was not
+accepted without code review and local validation.
 
 ## Credibility note
 
