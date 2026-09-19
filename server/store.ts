@@ -22,6 +22,19 @@ export class Store {
   ): Run {
     if (!conversationId.trim()) throw new Error("conversationId is required");
     if (!input.trim()) throw new Error("input is required");
+    const chunkCount = options.count ?? 12;
+    const delayMs = options.delayMs ?? 100;
+    if (!Number.isInteger(chunkCount) || chunkCount < 1)
+      throw new Error("count must be a positive integer");
+    if (!Number.isFinite(delayMs) || delayMs < 0)
+      throw new Error("delayMs must be a non-negative number");
+    if (
+      options.failAt !== undefined &&
+      (!Number.isInteger(options.failAt) ||
+        options.failAt < 0 ||
+        options.failAt >= chunkCount)
+    )
+      throw new Error("failAt must identify a chunk within the run");
     const run: Run = {
       id: randomUUID(),
       conversationId,
@@ -30,8 +43,8 @@ export class Store {
       state: "running",
       nextSequence: 1,
       createdAt: new Date().toISOString(),
-      chunkCount: options.count ?? 12,
-      delayMs: options.delayMs ?? 100,
+      chunkCount,
+      delayMs,
       failAt: options.failAt,
     };
     this.db

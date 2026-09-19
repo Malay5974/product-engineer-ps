@@ -35,7 +35,11 @@ const server = createServer(async (req, res) => {
         count < 1 ||
         count > APP_CONSTANTS.server.maxGeneratorChunkCount ||
         !Number.isFinite(delayMs) ||
-        delayMs < 0
+        delayMs < 0 ||
+        (b.failAt !== undefined &&
+          (!Number.isInteger(Number(b.failAt)) ||
+            Number(b.failAt) < 0 ||
+            Number(b.failAt) >= count))
       )
         return sendError(res, 400, "invalid generation options");
       const run = runtime.start(

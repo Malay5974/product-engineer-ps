@@ -41,6 +41,26 @@ describe("resumable conversation runtime", () => {
     expect(events.at(-1)?.kind).toBe("run_failed");
     store.close();
   });
+  it("keeps failed runs terminal and rejects invalid failure configuration", async () => {
+    const store = new Store();
+    const runtime = new Runtime(store);
+    expect(() =>
+      store.createRun("c1", "hello", { count: 3, failAt: 3 }),
+    ).toThrow("failAt must identify a chunk within the run");
+    expect(() =>
+      store.createRun("c1", "hello", { count: 3, failAt: -1 }),
+    ).toThrow("failAt must identify a chunk within the run");
+
+    const run = runtime.start("c1", "hello", { count: 4, failAt: 2 });
+    const failed = await waitFor(store, run.id);
+    expect(failed?.state).toBe("failed");
+    expect(() => runtime.resumeRun(run.id)).toThrow(
+      "cannot resume a failed run",
+    );
+    expect(store.eventsAfter(run.id, 0).at(-1)?.kind).toBe("run_failed");
+    expect(store.eventsAfter(run.id, 0)).toHaveLength(4);
+    store.close();
+  });
   it("deduplicates replay/live overlap by event identity", async () => {
     const store = new Store();
     const runtime = new Runtime(store);
