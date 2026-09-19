@@ -5,4 +5,5 @@ export default defineConfig({
   plugins: [react()],
   server: { proxy: { "/api": "http://localhost:3000" } },
   build: { rollupOptions: { input: "client/index.html" } },
+  ssr: { external: ["node:sqlite"] },
 });

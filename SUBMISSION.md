@@ -10,7 +10,7 @@
 
 ## Run the project
 
-Requires Node.js 24. Run `nvm use` before installing dependencies. If Node.js was changed after installation, run `npm rebuild better-sqlite3` using the active Node version.
+Requires Node.js 24. Run `nvm use` before installing dependencies.
 
 ```text
 npm install

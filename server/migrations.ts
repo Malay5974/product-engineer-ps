@@ -1,4 +1,4 @@
-import type Database from "better-sqlite3";
+import type { DatabaseSync } from "node:sqlite";
 
 type Migration = { version: number; name: string; sql: string };
 
@@ -34,7 +34,7 @@ const migrations: Migration[] = [
   },
 ];
 
-export function runMigrations(db: Database.Database): void {
+export function runMigrations(db: DatabaseSync): void {
   db.exec(`
     CREATE TABLE IF NOT EXISTS schema_migrations (
       version INTEGER PRIMARY KEY,
@@ -42,7 +42,7 @@ export function runMigrations(db: Database.Database): void {
       applied_at TEXT NOT NULL
     );
   `);
-  db.pragma("foreign_keys = ON");
+  db.exec("PRAGMA foreign_keys = ON;");
 
   const applied = db
     .prepare("SELECT version FROM schema_migrations ORDER BY version")
@@ -51,11 +51,16 @@ export function runMigrations(db: Database.Database): void {
 
   for (const migration of migrations) {
     if (appliedVersions.has(migration.version)) continue;
-    db.transaction(() => {
+    db.exec("BEGIN IMMEDIATE");
+    try {
       db.exec(migration.sql);
       db.prepare(
         "INSERT INTO schema_migrations (version, name, applied_at) VALUES (?, ?, ?)",
       ).run(migration.version, migration.name, new Date().toISOString());
-    })();
+      db.exec("COMMIT");
+    } catch (error) {
+      db.exec("ROLLBACK");
+      throw error;
+    }
   }
 }

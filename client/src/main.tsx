@@ -191,8 +191,13 @@ function App() {
               : item,
           ),
         );
-      if (event.kind === "run_completed" || event.kind === "run_failed") {
+      if (
+        event.kind === "run_completed" ||
+        event.kind === "run_failed" ||
+        event.kind === "run_interrupted"
+      ) {
         const completed = event.kind === "run_completed";
+        const interrupted = event.kind === "run_interrupted";
         setStatus(completed ? "completed" : "failed");
         setMessages((current) =>
           current.map((item) =>
@@ -201,6 +206,10 @@ function App() {
               : item,
           ),
         );
+        if (interrupted)
+          setDisconnectNotice(
+            "Response interrupted because the server restarted.",
+          );
         stream.close();
         reconnectAttempt.current = 0;
       }
@@ -226,6 +235,14 @@ function App() {
         delay,
       );
     };
+    stream.addEventListener("server_shutdown", () => {
+      stream.close();
+      manualDisconnect.current = true;
+      setStatus("disconnected");
+      setDisconnectNotice(
+        "Server stopped. Reconnect when the server is available again.",
+      );
+    });
   }
 
   return (

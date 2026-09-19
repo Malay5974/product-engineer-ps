@@ -116,7 +116,12 @@ server.listen(port, () => logEvent("server_started", { port }));
 
 function shutdown(signal: string): void {
   logEvent("server_shutdown_started", { signal });
-  for (const stream of activeStreams) stream.end();
+  for (const stream of activeStreams) {
+    stream.write(
+      `event: server_shutdown\ndata: ${JSON.stringify({ signal })}\n\n`,
+    );
+    stream.end();
+  }
   server.close(() => {
     store.close();
     logEvent("server_shutdown_completed");

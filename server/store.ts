@@ -1,13 +1,18 @@
-import Database from "better-sqlite3";
 import { randomUUID } from "node:crypto";
+import { createRequire } from "node:module";
+import type { DatabaseSync as DatabaseSyncType } from "node:sqlite";
 import { runMigrations } from "./migrations.js";
 import type { ConversationEvent, EventKind, Run, RunState } from "./types.js";
 
+const { DatabaseSync } = createRequire(import.meta.url)("node:sqlite") as {
+  DatabaseSync: new (filename: string) => DatabaseSyncType;
+};
+
 export class Store {
-  private db: Database.Database;
+  private db: DatabaseSyncType;
   constructor(filename = ":memory:") {
-    this.db = new Database(filename);
-    this.db.pragma("journal_mode = WAL");
+    this.db = new DatabaseSync(filename);
+    this.db.exec("PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;");
     runMigrations(this.db);
     this.recoverInterruptedRuns();
   }
@@ -24,10 +29,16 @@ export class Store {
       createdAt: new Date().toISOString(),
     };
     this.db
-      .prepare(
-        "INSERT INTO runs VALUES (@id,@conversationId,@userMessageId,@input,@state,@nextSequence,@createdAt)",
-      )
-      .run(run);
+      .prepare("INSERT INTO runs VALUES (?,?,?,?,?,?,?)")
+      .run(
+        run.id,
+        run.conversationId,
+        run.userMessageId,
+        run.input,
+        run.state,
+        run.nextSequence,
+        run.createdAt,
+      );
     return run;
   }
   getRun(id: string): Run | undefined {
@@ -38,6 +49,15 @@ export class Store {
       .get(id) as Run | undefined;
   }
   append(runId: string, kind: EventKind, payload: string): ConversationEvent {
+    return this.transaction(() =>
+      this.appendWithinTransaction(runId, kind, payload),
+    );
+  }
+  private appendWithinTransaction(
+    runId: string,
+    kind: EventKind,
+    payload: string,
+  ): ConversationEvent {
     const run = this.getRun(runId);
     if (!run) throw new Error("Run not found");
     const event: ConversationEvent = {
@@ -48,16 +68,19 @@ export class Store {
       payload,
       createdAt: new Date().toISOString(),
     };
-    this.db.transaction(() => {
-      this.db
-        .prepare(
-          "INSERT INTO events VALUES (@id,@runId,@sequence,@kind,@payload,@createdAt)",
-        )
-        .run(event);
-      this.db
-        .prepare("UPDATE runs SET next_sequence=next_sequence+1 WHERE id=?")
-        .run(runId);
-    })();
+    this.db
+      .prepare("INSERT INTO events VALUES (?,?,?,?,?,?)")
+      .run(
+        event.id,
+        event.runId,
+        event.sequence,
+        event.kind,
+        event.payload,
+        event.createdAt,
+      );
+    this.db
+      .prepare("UPDATE runs SET next_sequence=next_sequence+1 WHERE id=?")
+      .run(runId);
     return event;
   }
   eventsAfter(runId: string, cursor: number): ConversationEvent[] {
@@ -65,7 +88,7 @@ export class Store {
       .prepare(
         "SELECT id, run_id runId, sequence, kind, payload, created_at createdAt FROM events WHERE run_id=? AND sequence>? ORDER BY sequence",
       )
-      .all(runId, cursor) as ConversationEvent[];
+      .all(runId, cursor) as unknown as ConversationEvent[];
   }
 
   private recoverInterruptedRuns(): void {
@@ -75,7 +98,7 @@ export class Store {
       )
       .all() as Array<{ id: string; nextSequence: number }>;
 
-    this.db.transaction(() => {
+    this.transaction(() => {
       for (const run of runningRuns) {
         const event: ConversationEvent = {
           id: randomUUID(),
@@ -87,16 +110,23 @@ export class Store {
         };
         this.db
           .prepare(
-            "INSERT INTO events (id, run_id, sequence, kind, payload, created_at) VALUES (@id, @runId, @sequence, @kind, @payload, @createdAt)",
+            "INSERT INTO events (id, run_id, sequence, kind, payload, created_at) VALUES (?, ?, ?, ?, ?, ?)",
           )
-          .run(event);
+          .run(
+            event.id,
+            event.runId,
+            event.sequence,
+            event.kind,
+            event.payload,
+            event.createdAt,
+          );
         this.db
           .prepare(
             "UPDATE runs SET state='interrupted', next_sequence=next_sequence+1 WHERE id=? AND state='running'",
           )
           .run(run.id);
       }
-    })();
+    });
   }
   setState(
     runId: string,
@@ -108,13 +138,24 @@ export class Store {
     if (!run) throw new Error("Run not found");
     if (run.state !== "running")
       throw new Error(`invalid transition from ${run.state} to ${state}`);
-    return this.db.transaction(() => {
-      const event = this.append(runId, kind, payload);
+    return this.transaction(() => {
+      const event = this.appendWithinTransaction(runId, kind, payload);
       this.db
         .prepare("UPDATE runs SET state=? WHERE id=? AND state=?")
         .run(state, runId, "running");
       return event;
-    })();
+    });
+  }
+  private transaction<T>(callback: () => T): T {
+    this.db.exec("BEGIN IMMEDIATE");
+    try {
+      const result = callback();
+      this.db.exec("COMMIT");
+      return result;
+    } catch (error) {
+      this.db.exec("ROLLBACK");
+      throw error;
+    }
   }
   close(): void {
     this.db.close();

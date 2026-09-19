@@ -19,12 +19,10 @@
     "benchmark": "tsx server/benchmark.ts"
   },
   "dependencies": {
-    "better-sqlite3": "^11.8.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
-    "@types/better-sqlite3": "^7.6.12",
     "@types/node": "^22.10.5",
     "@types/react": "^19.0.3",
     "@types/react-dom": "^19.0.2",
