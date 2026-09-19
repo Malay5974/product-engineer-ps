@@ -14,6 +14,8 @@ npm run dev:client   # terminal 2, http://localhost:5173/client/
 
 The server stores durable history in `conversation.db` using Node.js 24's built-in synchronous SQLite API. Set `DB_FILE` to use a different SQLite file. The client uses a deterministic fake response generator, so no model API key is required. No native SQLite package rebuild is required.
 
+Optional environment settings are documented in `.env.example`. The server also exposes `POST /api/runs/:runId/resume` for an explicit, idempotent resume request; repeated requests do not create a second generator because the runtime tracks active runs.
+
 ## Verification
 
 ```text
@@ -62,6 +64,8 @@ npm run test:watch
 - `client/src/main.tsx`: connection state, cursor tracking, and event deduplication.
 - `client/src/api.ts`: the single frontend JSON HTTP wrapper; new JSON API calls should use `requestJson`.
 - `tests/runtime.test.ts`: ordering, replay, failure, and replay/live overlap tests.
+
+GitHub Actions runs formatting, build, tests, and the benchmark on every push and pull request.
 
 Each event has a stable ID and monotonically increasing per-run sequence. The server owns ordering. The client ignores an event whose sequence it has already rendered. A reconnect requests `events?cursor=N`, allowing persisted replay to transition into live delivery without duplicate display.
 

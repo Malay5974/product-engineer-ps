@@ -5,6 +5,12 @@ import { createRun } from "./api.js";
 import { APP_CONSTANTS } from "../../shared/constants.js";
 
 type Event = { sequence: number; kind: string; payload: string };
+type Activity = {
+  id: string;
+  level: "success" | "warning" | "error";
+  text: string;
+  time: string;
+};
 type Message = {
   id: string;
   role: "user" | "assistant";
@@ -36,6 +42,7 @@ function App() {
     APP_CONSTANTS.conversation.defaultChunkCount,
   );
   const [disconnectNotice, setDisconnectNotice] = useState("");
+  const [activity, setActivity] = useState<Activity[]>([]);
   const conversationId = useRef<string>(crypto.randomUUID());
   const streamRef = useRef<EventSource | null>(null);
   const cursorRef = useRef(0);
@@ -45,6 +52,22 @@ function App() {
   const reconnectAttempt = useRef(0);
   const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const manualDisconnect = useRef(false);
+
+  function addActivity(level: Activity["level"], text: string): void {
+    setActivity((current) => [
+      ...current.slice(-7),
+      {
+        id: crypto.randomUUID(),
+        level,
+        text,
+        time: new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        }),
+      },
+    ]);
+  }
 
   useEffect(() => {
     if (historyRef.current)
@@ -113,7 +136,9 @@ function App() {
     setCursor(0);
     setStatus("idle");
     setDisconnectNotice("");
+    setActivity([]);
     setInput(APP_CONSTANTS.conversation.defaultInput);
+    addActivity("success", "Started a new conversation.");
   }
 
   async function sendMessage() {
@@ -135,6 +160,7 @@ function App() {
     setInput("");
     setStatus("connecting");
     setDisconnectNotice("");
+    addActivity("warning", "Starting the response stream…");
     try {
       const run = await createRun({
         conversationId: conversationId.current,
@@ -144,6 +170,7 @@ function App() {
         delayMs: APP_CONSTANTS.conversation.responseDelayMs,
       });
       setRunId(run.id);
+      addActivity("success", "Response stream connected.");
       connect(run.id, 0, assistantId);
     } catch (error) {
       setMessages((current) =>
@@ -159,6 +186,7 @@ function App() {
           ? error.message
           : "Unable to start the response.",
       );
+      addActivity("error", "Could not start the response.");
     }
   }
 
@@ -172,6 +200,12 @@ function App() {
     manualDisconnect.current = false;
     setStatus("connected");
     setDisconnectNotice("");
+    addActivity(
+      from > 0 ? "success" : "warning",
+      from > 0
+        ? `Recovering from saved cursor ${from}…`
+        : "Listening for response events…",
+    );
     const stream = new EventSource(APP_CONSTANTS.api.eventsPath(id, from));
     streamRef.current = stream;
     stream.onmessage = (message) => {
@@ -210,6 +244,14 @@ function App() {
           setDisconnectNotice(
             "Response interrupted because the server restarted.",
           );
+        addActivity(
+          completed ? "success" : "error",
+          completed
+            ? "Response completed successfully."
+            : interrupted
+              ? "Response was interrupted by a server restart."
+              : "Response failed after partial output.",
+        );
         stream.close();
         reconnectAttempt.current = 0;
       }
@@ -230,6 +272,7 @@ function App() {
       );
       setStatus("reconnecting");
       setDisconnectNotice(`Connection lost. Reconnecting in ${delay / 1000}s…`);
+      addActivity("warning", `Connection lost. Retrying in ${delay / 1000}s…`);
       reconnectTimer.current = setTimeout(
         () => connect(id, cursorRef.current, assistantId),
         delay,
@@ -242,6 +285,7 @@ function App() {
       setDisconnectNotice(
         "Server stopped. Reconnect when the server is available again.",
       );
+      addActivity("warning", "Server stopped. Waiting for manual recovery.");
     });
   }
 
@@ -335,6 +379,7 @@ function App() {
             streamRef.current?.close();
             setStatus("disconnected");
             setDisconnectNotice("Connection lost. Reconnect to continue.");
+            addActivity("error", "Disconnected manually.");
           }}
           disabled={!runId || status !== "connected"}
         >
@@ -354,6 +399,36 @@ function App() {
         {events.length} events in current reply · {chunkCount} response chunks
         requested · conversation {conversationId.current.slice(0, 8)}
       </small>
+      <section
+        className="activity"
+        aria-label="Activity log"
+        aria-live="polite"
+      >
+        <div className="activity-header">
+          <div>
+            <strong>Activity</strong>
+            <span>Connection and recovery events</span>
+          </div>
+          <span className={`activity-status ${status}`}>
+            <span className="activity-dot" aria-hidden="true" />
+            {status}
+          </span>
+        </div>
+        {activity.length === 0 ? (
+          <span className="activity-empty">No activity yet.</span>
+        ) : (
+          [...activity].reverse().map((item) => (
+            <div className="activity-item" key={item.id}>
+              <span
+                className={`activity-dot ${item.level}`}
+                aria-hidden="true"
+              />
+              <span>{item.text}</span>
+              <time>{item.time}</time>
+            </div>
+          ))
+        )}
+      </section>
     </main>
   );
 }

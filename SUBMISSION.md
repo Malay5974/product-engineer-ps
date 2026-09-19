@@ -30,6 +30,8 @@ npm run benchmark
 
 The benchmark generates 30 ordered response events, disconnects while generation is active, replays from the recorded cursor, and verifies zero missing and duplicate events.
 
+Optional local configuration is documented in `.env.example`. Recovery can also be requested explicitly with `POST /api/runs/:runId/resume`; the operation is safe to repeat for the same active run.
+
 ## Current implementation
 
 The server stores runs and ordered events in SQLite. Versioned migrations are applied automatically at startup, so reviewers do not need to create tables manually. SSE exposes events after a client cursor. The client owns presentation state and deduplicates events by sequence. The deterministic fake provider makes success and failure scenarios repeatable without a paid model API.

@@ -102,4 +102,15 @@ describe("resumable conversation runtime", () => {
     );
     store.close();
   });
+  it("does not start duplicate generation when a run is resumed twice", async () => {
+    const store = new Store();
+    const runtime = new Runtime(store);
+    const run = runtime.start("c1", "resume safely", { count: 4, delayMs: 1 });
+    runtime.resumeRun(run.id);
+    runtime.resumeRun(run.id);
+    const final = await waitFor(store, run.id);
+    expect(final?.state).toBe("completed");
+    expect(store.eventsAfter(run.id, 0)).toHaveLength(6);
+    store.close();
+  });
 });

@@ -96,6 +96,15 @@ const server = createServer(async (req, res) => {
       });
       return;
     }
+    if (
+      req.method === "POST" &&
+      parts[0] === "api" &&
+      parts[1] === "runs" &&
+      parts[3] === "resume"
+    ) {
+      const run = runtime.resumeRun(parts[2]);
+      return sendSuccess(res, 200, run);
+    }
     if (req.method === "GET" && parts[0] === "api" && parts[1] === "runs") {
       const run = store.getRun(parts[2]);
       return run
