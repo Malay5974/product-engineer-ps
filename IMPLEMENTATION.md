@@ -24,7 +24,14 @@ npm test
 npm run benchmark
 ```
 
-The benchmark creates 30 ordered chunks, waits for completion, replays after a cursor, and verifies exactly 32 events (run-start, 30 chunks, run-completed), zero duplicates, zero missing events, and a completed terminal state.
+The benchmark starts the real backend with a temporary SQLite database and uses
+the HTTP and SSE endpoints. It verifies four scenarios: disconnect/reconnect
+with 30 ordered text events, partial provider failure, backend stop and restart
+with durable recovery, and invalid-cursor handling. It reports the cursor,
+events received before and after reconnect, missing events, duplicate events,
+terminal events, and final run states. The successful benchmark output includes
+zero missing events, zero duplicates, a failed terminal state for the injected
+failure scenario, and completed terminal states for the successful scenarios.
 
 ## Test commands
 
