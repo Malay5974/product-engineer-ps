@@ -1,0 +1,36 @@
+{
+  "name": "caygnus-resumable-realtime-conversation",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24 <26"
+  },
+  "scripts": {
+    "dev:server": "tsx server/index.ts",
+    "dev:client": "vite --host 127.0.0.1",
+    "build": "tsc -p tsconfig.json && vite build",
+    "format": "prettier --write server client/src tests package.json tsconfig.json vite.config.ts IMPLEMENTATION.md SUBMISSION.md SUBMISSION_TEMPLATE.md .github/workflows/ci.yml",
+    "format:check": "prettier --check server client/src tests package.json tsconfig.json vite.config.ts IMPLEMENTATION.md SUBMISSION.md SUBMISSION_TEMPLATE.md .github/workflows/ci.yml",
+    "start": "node dist/server/index.js",
+    "test": "vitest run",
+    "test:single": "vitest run tests/runtime.test.ts",
+    "test:case": "vitest run -t",
+    "test:watch": "vitest",
+    "benchmark": "tsx server/benchmark.ts"
+  },
+  "dependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "@types/react": "^19.0.3",
+    "@types/react-dom": "^19.0.2",
+    "@vitejs/plugin-react": "^4.3.4",
+    "prettier": "^3.9.8",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.7",
+    "vitest": "^2.1.8"
+  }
+}
