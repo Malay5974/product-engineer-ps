@@ -67,4 +67,45 @@ accepted without code review and local validation.
 
 ## Credibility note
 
-TODO — add a previously shipped product, personal contribution, scale, difficult decision, and evidence link where available.
+At my previous company, I worked on Blinds To Go, an enterprise-level
+e-commerce platform for configuring and purchasing custom window treatments.
+One of my main contributions was building product synchronization between the
+Experro e-commerce platform and the BTG AS400 database. The synchronization had
+to support products with 500+ variants while keeping product data consistent
+across systems.
+
+I also implemented frontend product configuration flows. Each style exposes
+multiple dependent options, including colors, motor choices, mount types, and
+other customization settings. Available options change as the customer makes
+selections, so the UI had to represent complex combinations accurately and
+prevent invalid configurations. I owned the frontend work for these variant
+selection flows as well as the product-sync work described above.
+
+The same configuration model is used throughout the store. A public example is
+the [custom roller shades configurator](https://www.blindstogo.com/shades/roller-shades/customize-snow-aurora-vinyl-blackout-roller-shades/),
+which demonstrates the dependent product options and customization experience.
+
+I also worked on Forminator at Incsub LLC, a widely installed WordPress form
+plugin. I owned the end-to-end Stripe Checkout Session API flow for the
+plugin's Stripe field. The previous Payment Intent integration primarily
+supported payment methods with immediate confirmation. The new Checkout
+Session integration expanded support to Stripe payment methods that require
+redirects, delayed confirmation, loans, or installment payments. We handled
+those outcomes through Stripe webhooks and moved the integration toward Stripe
+Connect rather than relying only on direct API-secret connections.
+
+This work required preserving compatibility in a large, established plugin.
+For example, Checkout requirements vary by payment method: some require a
+country, email address, phone number, or other customer information. I added
+conditional validation in the appropriate form and payment paths instead of
+making those fields globally mandatory. I also handled adaptive-pricing and
+currency-conversion edge cases where Stripe rejected an amount below the
+minimum for the selected currency. When Stripe returned the relevant error, the
+integration applied a valid default amount so the Stripe field and currency
+selector could render and the user could continue with the correct pricing
+flow.
+
+The public [Forminator plugin page and developer changelog](https://wordpress.org/plugins/forminator/#developers)
+documents the 1.56.0 release (July 21, 2026), including Stripe Connect OAuth,
+Stripe Checkout Sessions, Adaptive Pricing, and migration of existing forms to
+the Checkout Sessions API.
